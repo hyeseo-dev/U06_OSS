@@ -6,6 +6,7 @@ ACMovingPlarform::ACMovingPlarform()
 	SetMobility(EComponentMobility::Movable);
 
 	Speed = 100.f;
+	ActiveCount = 1;
 }
 
 void ACMovingPlarform::BeginPlay()
@@ -27,23 +28,41 @@ void ACMovingPlarform::Tick(float DelaTime)
 {
 	Super::Tick(DelaTime);
 
-	if (HasAuthority())
+	if (ActiveCount > 0)
 	{
-		FVector CurrentLocation = GetActorLocation();
-
-		float TotalDistance = (StartWS - TargetWS).Size();
-		float CurrentDistance = (CurrentLocation - StartWS).Size();
-
-		if (CurrentDistance >= TotalDistance)
+		if (HasAuthority())
 		{
-			FVector Temp = StartWS;
-			StartWS = TargetWS;
-			TargetWS = Temp;
+			FVector CurrentLocation = GetActorLocation();
+
+			float TotalDistance = (StartWS - TargetWS).Size();
+			float CurrentDistance = (CurrentLocation - StartWS).Size();
+
+			if (CurrentDistance >= TotalDistance)
+			{
+				FVector Temp = StartWS;
+				StartWS = TargetWS;
+				TargetWS = Temp;
+			}
+
+			FVector Direction = (TargetWS - StartWS).GetSafeNormal();
+
+			CurrentLocation += Direction * Speed * DelaTime;
+			SetActorLocation(CurrentLocation);
 		}
+	}
 
-		FVector Direction = (TargetWS - StartWS).GetSafeNormal();
+}
 
-		CurrentLocation += Direction * Speed * DelaTime;
-		SetActorLocation(CurrentLocation);
+void ACMovingPlarform::IncreaseActiveCount()
+{
+	ActiveCount++;
+}
+
+void ACMovingPlarform::DecreaseActiveCount()
+{
+	if (ActiveCount > 0)
+	{
+		ActiveCount--;
 	}
 }
+
