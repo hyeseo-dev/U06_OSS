@@ -1,6 +1,7 @@
 #include "CGameInstance.h"
-#include "../OSS.h"
 #include "Blueprint/UserWidget.h"
+#include "../OSS.h"
+#include "../UI/CMainMenuWidget.h"
 
 UCGameInstance::UCGameInstance()
 {
@@ -21,6 +22,11 @@ void UCGameInstance::Host()
 {
 	LogOnScreen(this, "Host", FColor::Green);
 
+	if (MainMenu)
+	{
+		MainMenu->SetIntputToGame();
+	}
+
 	UWorld* World = GetWorld();
 	if (!World)
 	{
@@ -34,6 +40,11 @@ void UCGameInstance::Join(const FString& InAddress)
 {
 	LogOnScreen(this, "Join to " + InAddress, FColor::Green);
 
+	if (MainMenu)
+	{
+		MainMenu->SetIntputToGame();
+	}
+
 	APlayerController* PC = GetFirstLocalPlayerController();
 	if (!PC)
 	{
@@ -45,22 +56,12 @@ void UCGameInstance::Join(const FString& InAddress)
 
 void UCGameInstance::LoadMainMenu()
 {
-	UUserWidget* MainMenu = CreateWidget<UUserWidget>(this, MainMenuWidgetClass);
+	MainMenu = CreateWidget<UCMainMenuWidget>(this, MainMenuWidgetClass);
 	
 	if (!MainMenu)
 	{
 		return;
 	}
-
-	MainMenu->AddToViewport();
-	
-	APlayerController* PC = GetFirstLocalPlayerController();
-	if (PC)
-	{
-		FInputModeUIOnly InputMode;
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-
-		PC->SetInputMode(InputMode);
-		PC->bShowMouseCursor = true;
-	}
+	MainMenu->SetOwningInstance(this);
+	MainMenu->SetIntputToUI();
 }
