@@ -29,6 +29,9 @@ private:
 	UFUNCTION()
 	void SwitchMainMenu();
 
+	UFUNCTION()
+	void QuitPressed();
+
 protected:
 	//Buttons
 	UPROPERTY(meta = (BindWidget))
@@ -42,6 +45,9 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	UButton* JoinServerButton;
+	
+	UPROPERTY(meta = (BindWidget))
+	UButton* QuitButton;
 	
 	//Widgets
 	UPROPERTY(meta = (BindWidget))
