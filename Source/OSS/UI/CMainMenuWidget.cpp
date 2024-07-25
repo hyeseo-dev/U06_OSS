@@ -34,54 +34,6 @@ bool UCMainMenuWidget::Initialize()
 	return true;
 }
 
-void UCMainMenuWidget::SetOwningInstance(ICMenuInterface* InOwningInstance)
-{
-	OwningInstance = InOwningInstance;
-}
-
-void UCMainMenuWidget::SetIntputToUI()
-{
-	AddToViewport();
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	APlayerController* PC = World->GetFirstPlayerController();
-
-	if (PC)
-	{
-		FInputModeUIOnly InputMode;
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-
-		PC->SetInputMode(InputMode);
-		PC->bShowMouseCursor = true;
-	}
-}
-
-void UCMainMenuWidget::SetIntputToGame()
-{
-	RemoveFromParent();
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	APlayerController* PC = World->GetFirstPlayerController();
-
-	if (PC)
-	{
-		FInputModeGameOnly InputMode;
-
-		PC->SetInputMode(InputMode);
-		PC->bShowMouseCursor = false;
-	}
-}
-
 void UCMainMenuWidget::HostServer()
 {
 	ensure(OwningInstance);
@@ -102,11 +54,15 @@ void UCMainMenuWidget::JoinServer()
 void UCMainMenuWidget::SwitchJoinMenu()
 {
 	ensure(MenuSwitcher);
+	ensure(JoinMenu);
+
 	MenuSwitcher->SetActiveWidget(JoinMenu);
 }
 
 void UCMainMenuWidget::SwitchMainMenu()
 {
 	ensure(MenuSwitcher);
+	ensure(MainMenu);
+
 	MenuSwitcher->SetActiveWidget(MainMenu);
 }
