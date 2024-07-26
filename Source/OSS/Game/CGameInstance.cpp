@@ -39,16 +39,6 @@ void UCGameInstance::Init()
 			SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UCGameInstance::OnCreateSessionCompleted);
 			SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UCGameInstance::OnDestroySessionCompleted);
 			SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UCGameInstance::OnFindSessionCompleted);
-
-			//FindSession
-			SessionSearch = MakeShareable(new FOnlineSessionSearch());
-			if (SessionSearch.IsValid())
-			{
-				LogOnScreen(this, "Start Finding Session");
-
-				SessionSearch->bIsLanQuery = true;
-				SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
-			}
 		}
 	}
 	else
@@ -116,6 +106,18 @@ void UCGameInstance::OpenMainMenuLevel()
 	PC->ClientTravel("/Game/Maps/MainMenu", ETravelType::TRAVEL_Absolute);
 }
 
+void UCGameInstance::StartFindSession()
+{
+	SessionSearch = MakeShareable(new FOnlineSessionSearch());
+	if (SessionSearch.IsValid())
+	{
+		LogOnScreen(this, "Start Finding Session");
+
+		SessionSearch->bIsLanQuery = true;
+		SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
+	}
+}
+
 void UCGameInstance::LoadMainMenu()
 {
 	ensure(MainMenuWidgetClass);
@@ -179,19 +181,24 @@ void UCGameInstance::OnDestroySessionCompleted(FName OutSessionName, bool bWasSu
 	{
 		CreateSession_Internal();
 	}
-
 }
 
 void UCGameInstance::OnFindSessionCompleted(bool bWasSuccessful)
 {
-	if (bWasSuccessful && SessionSearch.IsValid())
+	if (bWasSuccessful && SessionSearch.IsValid() && MainMenu)
 	{
 		LogOnScreen(this, "Finish Finding Session");
+
+		TArray<FString> SessionList;
 
 		for (const auto& SearchResult : SessionSearch->SearchResults)
 		{
 			UE_LOG(LogTemp, Error, TEXT("Found Session ID : %s"), *SearchResult.GetSessionIdStr());
 			UE_LOG(LogTemp, Error, TEXT("Ping(ms) : %d"), SearchResult.PingInMs);
+
+			SessionList.Add(*SearchResult.GetSessionIdStr());
 		}
+
+		MainMenu->SetSessionList(SessionList);
 	}
 }

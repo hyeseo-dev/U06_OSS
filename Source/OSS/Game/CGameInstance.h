@@ -30,6 +30,8 @@ public:
 
 	virtual void OpenMainMenuLevel() override;
 
+	virtual void StartFindSession() override;
+
 public:
 	UFUNCTION(BlueprintCallable, Exec)
 	void LoadMainMenu();
