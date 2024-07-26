@@ -1,7 +1,11 @@
 #include "CGameInstance.h"
 #include "Blueprint/UserWidget.h"
+#include "Interfaces/OnlineSessionInterface.h"
+#include "OnlineSessionSettings.h"
 #include "../OSS.h"
 #include "../UI/CMainMenuWidget.h"
+
+const static FName SESSION_NAME = TEXT("GameSession");
 
 UCGameInstance::UCGameInstance()
 {
@@ -21,24 +25,66 @@ UCGameInstance::UCGameInstance()
 void UCGameInstance::Init()
 {
 	Super::Init();
+
+	IOnlineSubsystem* OSS = IOnlineSubsystem::Get();
+	if (OSS)
+	{
+		UE_LOG(LogTemp, Display, TEXT("OSS Name : %s"), *OSS->GetSubsystemName().ToString());
+
+		SessionInterface = OSS->GetSessionInterface();
+		if (SessionInterface.IsValid())
+		{
+			UE_LOG(LogTemp, Display, TEXT("Session Interface fount"));
+
+			SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UCGameInstance::OnCreateSessionCompleted);
+			SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UCGameInstance::OnDestroySessionCompleted);
+			SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UCGameInstance::OnFindSessionCompleted);
+
+			//FindSession
+			SessionSearch = MakeShareable(new FOnlineSessionSearch());
+			if (SessionSearch.IsValid())
+			{
+				LogOnScreen(this, "Start Finding Session");
+
+				SessionSearch->bIsLanQuery = true;
+				SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
+			}
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Display, TEXT("Not found OSS"));
+	}
 }
 
 void UCGameInstance::Host()
 {
-	LogOnScreen(this, "Host", FColor::Green);
-
-	if (MainMenu)
+	if (SessionInterface.IsValid())
 	{
-		MainMenu->SetInputToGame();
-	}
+		auto ExsistingSession = SessionInterface->GetNamedSession(SESSION_NAME);
 
-	UWorld* World = GetWorld();
-	if (!World)
+		if (ExsistingSession)
+		{
+			SessionInterface->DestroySession(SESSION_NAME);
+		}
+		else
+		{
+			CreateSession_Internal();
+		}
+	}
+}
+
+void UCGameInstance::CreateSession_Internal()
+{
+	if (SessionInterface.IsValid())
 	{
-		return;
-	}
+		FOnlineSessionSettings SessionSettings;
+		SessionSettings.bIsLANMatch = true;
+		SessionSettings.NumPublicConnections = 2;
+		SessionSettings.bShouldAdvertise = true;
 
-	World->ServerTravel("/Game/Maps/Coop?listen");
+		SessionInterface->CreateSession(0, SESSION_NAME, SessionSettings);
+	}
 }
 
 void UCGameInstance::Join(const FString& InAddress)
@@ -97,4 +143,55 @@ void UCGameInstance::LoadInGameMenu()
 
 	InGameMenu->SetOwningInstance(this);
 	InGameMenu->SetInputToUI();
+}
+
+void UCGameInstance::OnCreateSessionCompleted(FName InSessionName, bool bWasSuccessful)
+{
+	UE_LOG(LogTemp, Error, TEXT("Created Session"));
+
+	if (!bWasSuccessful)
+	{
+		LogOnScreen(this, "Could not create session!", FColor::Red);
+		return;
+	}
+
+	LogOnScreen(this, "Create Session completed, Session Name : " + InSessionName.ToString(), FColor::Green);
+
+	if (MainMenu)
+	{
+		MainMenu->SetInputToGame();
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	World->ServerTravel("/Game/Maps/Coop?listen");
+}
+
+void UCGameInstance::OnDestroySessionCompleted(FName OutSessionName, bool bWasSuccessful)
+{
+	UE_LOG(LogTemp, Error, TEXT("Destroied Session"));
+
+	if (bWasSuccessful)
+	{
+		CreateSession_Internal();
+	}
+
+}
+
+void UCGameInstance::OnFindSessionCompleted(bool bWasSuccessful)
+{
+	if (bWasSuccessful && SessionSearch.IsValid())
+	{
+		LogOnScreen(this, "Finish Finding Session");
+
+		for (const auto& SearchResult : SessionSearch->SearchResults)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Found Session ID : %s"), *SearchResult.GetSessionIdStr());
+			UE_LOG(LogTemp, Error, TEXT("Ping(ms) : %d"), SearchResult.PingInMs);
+		}
+	}
 }
