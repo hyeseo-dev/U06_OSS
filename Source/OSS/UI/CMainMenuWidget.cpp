@@ -61,17 +61,16 @@ void UCMainMenuWidget::HostServer()
 
 void UCMainMenuWidget::JoinServer()
 {
-	if (SelectedIndex.IsSet())
+	if (SelectedIndex.IsSet() && OwningInstance)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("SelectedIndex : %d"), SelectedIndex.GetValue());
+
+		OwningInstance->Join(SelectedIndex.GetValue());
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("SelectedIndex is not set yet"));
 	}
-
-	//ensure(OwningInstance);
-	//OwningInstance->Join("");
 }
 
 void UCMainMenuWidget::SwitchJoinMenu()

@@ -1,6 +1,5 @@
 #include "CGameInstance.h"
 #include "Blueprint/UserWidget.h"
-#include "Interfaces/OnlineSessionInterface.h"
 #include "OnlineSessionSettings.h"
 #include "../OSS.h"
 #include "../UI/CMainMenuWidget.h"
@@ -39,6 +38,7 @@ void UCGameInstance::Init()
 			SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UCGameInstance::OnCreateSessionCompleted);
 			SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UCGameInstance::OnDestroySessionCompleted);
 			SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UCGameInstance::OnFindSessionCompleted);
+			SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UCGameInstance::OnJoinSessionCompleted);
 		}
 	}
 	else
@@ -77,22 +77,19 @@ void UCGameInstance::CreateSession_Internal()
 	}
 }
 
-void UCGameInstance::Join(const FString& InAddress)
+void UCGameInstance::Join(uint32 InIndex)
 {
-	LogOnScreen(this, "Join to " + InAddress, FColor::Green);
+	if (!SessionInterface.IsValid() || !SessionSearch.IsValid())
+	{
+		return;
+	}
 
 	if (MainMenu)
 	{
 		MainMenu->SetInputToGame();
 	}
 
-	APlayerController* PC = GetFirstLocalPlayerController();
-	if (!PC)
-	{
-		return;
-	}
-
-	PC->ClientTravel(InAddress, ETravelType::TRAVEL_Absolute);
+	SessionInterface->JoinSession(0, SESSION_NAME, SessionSearch->SearchResults[InIndex]);
 }
 
 void UCGameInstance::OpenMainMenuLevel()
@@ -201,4 +198,24 @@ void UCGameInstance::OnFindSessionCompleted(bool bWasSuccessful)
 
 		MainMenu->SetSessionList(SessionList);
 	}
+}
+
+void UCGameInstance::OnJoinSessionCompleted(FName InSessionName, EOnJoinSessionCompleteResult::Type InResult)
+{
+	FString Address;
+	if (SessionInterface->GetResolvedConnectString(InSessionName, Address) == false)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could not resolve to IP address"));
+		return;
+	}
+
+	LogOnScreen(this, "Join to " + Address, FColor::Green);
+
+	APlayerController* PC = GetFirstLocalPlayerController();
+	if (!PC)
+	{
+		return;
+	}
+	
+	PC->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
 }
