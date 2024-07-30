@@ -107,17 +107,22 @@ void UCMainMenuWidget::QuitPressed()
 	}
 }
 
-void UCMainMenuWidget::SetSessionList(TArray<FString> InSessionNames)
+void UCMainMenuWidget::SetSessionList(TArray<FSessionData> InSessionDatas)
 {
 	SessionList->ClearChildren();
 
 	uint32 i = 0;
-	for (const auto& SessionName : InSessionNames)
+	for (const auto& SessionData : InSessionDatas)
 	{
 		UCSessionRowWidget* SessionRow = CreateWidget<UCSessionRowWidget>(this, SessionRowClass);
+
 		if (SessionRow)
 		{
-			SessionRow->SessionName->SetText(FText::FromString(SessionName));
+			SessionRow->SessionName->SetText(FText::FromString(SessionData.Name));
+			SessionRow->HostUser->SetText(FText::FromString(SessionData.HostUserName));
+			FString FractionStr = FString::Printf(TEXT("%d/%d"), SessionData.CurrentPlayers, SessionData.MaxPlayers);
+			SessionRow->ConnectionFraction->SetText(FText::FromString(FractionStr));
+
 			SessionRow->Setup(this, i++);
 			SessionList->AddChild(SessionRow);
 		}
@@ -127,4 +132,13 @@ void UCMainMenuWidget::SetSessionList(TArray<FString> InSessionNames)
 void UCMainMenuWidget::SetSelectedIndex(uint32 InIndex)
 {
 	SelectedIndex = InIndex;
+
+	for (int32 i = 0; i < SessionList->GetChildrenCount(); i++)
+	{
+		UCSessionRowWidget* SessionRow = Cast<UCSessionRowWidget>(SessionList->GetChildAt(i));
+		if (SessionRow)
+		{
+			SessionRow->bEverClicked = (SelectedIndex.IsSet() && SelectedIndex.GetValue() == i);
+		}
+	}
 }

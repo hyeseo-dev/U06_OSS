@@ -20,9 +20,19 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* SessionName;
 
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* HostUser;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* ConnectionFraction;
+
 private:
 	UFUNCTION()
 	void OnClicked();
+
+public:
+	UPROPERTY(BlueprintReadOnly)
+	bool bEverClicked;
 
 private:
 	UPROPERTY(meta = (BindWidget))
