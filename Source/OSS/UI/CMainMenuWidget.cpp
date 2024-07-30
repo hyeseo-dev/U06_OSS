@@ -3,6 +3,7 @@
 #include "Components/WidgetSwitcher.h"
 #include "Components/PanelWidget.h"
 #include "Components/TextBlock.h"
+#include "Components/EditableTextBox.h"
 #include "CSessionRowWidget.h"
 
 UCMainMenuWidget::UCMainMenuWidget()
@@ -25,7 +26,17 @@ bool UCMainMenuWidget::Initialize()
 
 	if (HostButton)
 	{
-		HostButton->OnClicked.AddDynamic(this, &UCMainMenuWidget::HostServer);
+		HostButton->OnClicked.AddDynamic(this, &UCMainMenuWidget::SwitchHostMenu);
+	}
+
+	if (CancleHostMenuButton)
+	{
+		CancleHostMenuButton->OnClicked.AddDynamic(this, &UCMainMenuWidget::SwitchMainMenu);
+	}
+
+	if (HostServerButton)
+	{
+		HostServerButton->OnClicked.AddDynamic(this, &UCMainMenuWidget::HostServer);
 	}
 
 	if (JoinButton)
@@ -43,7 +54,6 @@ bool UCMainMenuWidget::Initialize()
 		JoinServerButton->OnClicked.AddDynamic(this, &UCMainMenuWidget::JoinServer);
 	}
 
-
 	if (QuitButton)
 	{
 		QuitButton->OnClicked.AddDynamic(this, &UCMainMenuWidget::QuitPressed);
@@ -56,7 +66,7 @@ void UCMainMenuWidget::HostServer()
 {
 	ensure(OwningInstance);
 
-	OwningInstance->Host();
+	OwningInstance->Host(DesiredSessionName->GetText().ToString());
 }
 
 void UCMainMenuWidget::JoinServer()
@@ -90,6 +100,14 @@ void UCMainMenuWidget::SwitchMainMenu()
 	ensure(MainMenu);
 
 	MenuSwitcher->SetActiveWidget(MainMenu);
+}
+
+void UCMainMenuWidget::SwitchHostMenu()
+{
+	ensure(MenuSwitcher);
+	ensure(HostMenu);
+
+	MenuSwitcher->SetActiveWidget(HostMenu);
 }
 
 void UCMainMenuWidget::QuitPressed()
