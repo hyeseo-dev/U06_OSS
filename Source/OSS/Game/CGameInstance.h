@@ -33,6 +33,8 @@ public:
 
 	virtual void StartFindSession() override;
 
+	void StartSession();
+
 public:
 	UFUNCTION(BlueprintCallable, Exec)
 	void LoadMainMenu();

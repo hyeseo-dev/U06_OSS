@@ -130,6 +130,14 @@ void UCGameInstance::StartFindSession()
 	}
 }
 
+void UCGameInstance::StartSession()
+{
+	if (SessionInterface.IsValid())
+	{
+		SessionInterface->StartSession(SESSION_NAME);
+	}
+}
+
 void UCGameInstance::LoadMainMenu()
 {
 	ensure(MainMenuWidgetClass);
@@ -182,7 +190,7 @@ void UCGameInstance::OnCreateSessionCompleted(FName InSessionName, bool bWasSucc
 		return;
 	}
 
-	World->ServerTravel("/Game/Maps/Coop?listen");
+	World->ServerTravel("/Game/Maps/Lobby?listen");
 }
 
 void UCGameInstance::OnDestroySessionCompleted(FName OutSessionName, bool bWasSuccessful)
