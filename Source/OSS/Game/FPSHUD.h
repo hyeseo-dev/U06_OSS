@@ -4,6 +4,8 @@
 #include "GameFramework/HUD.h"
 #include "FPSHUD.generated.h"
 
+class UCPlayerStatusWidget;
+
 UCLASS()
 class AFPSHUD : public AHUD
 {
@@ -14,8 +16,17 @@ public:
 
 	virtual void DrawHUD() override;
 
+protected:
+	virtual void BeginPlay() override;
+
 private:
 	class UTexture2D* CrosshairTex;
+
+	//Player Status Widget
+private:
+	TSubclassOf<UCPlayerStatusWidget> PlayerStatusWidgetClass;
+
+	UCPlayerStatusWidget* PlayerStatusWidget;
 
 };
 

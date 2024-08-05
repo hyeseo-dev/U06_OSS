@@ -1,16 +1,32 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "FPSHUD.h"
 #include "Engine/Canvas.h"
 #include "TextureResource.h"
 #include "CanvasItem.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/Texture2D.h"
+#include "../UI/CPlayerStatusWidget.h"
 
 AFPSHUD::AFPSHUD()
 {
 	static ConstructorHelpers::FObjectFinder<UTexture2D> CrosshairTexObj(TEXT("/Game/FirstPerson/Textures/FirstPersonCrosshair"));
 	CrosshairTex = CrosshairTexObj.Object;
+
+	static ConstructorHelpers::FClassFinder<UCPlayerStatusWidget> WidgetClass(TEXT("/Game/UI/WB_PlayerStatus"));
+	if (WidgetClass.Succeeded())
+	{
+		PlayerStatusWidgetClass = WidgetClass.Class;
+	}
+}
+
+void AFPSHUD::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if (ensure(PlayerStatusWidgetClass))
+	{
+		PlayerStatusWidget = CreateWidget<UCPlayerStatusWidget>(GetWorld(), PlayerStatusWidgetClass);
+		PlayerStatusWidget->AddToViewport();
+	}
 }
 
 void AFPSHUD::DrawHUD()
