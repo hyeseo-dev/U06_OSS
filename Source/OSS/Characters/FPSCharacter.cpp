@@ -9,6 +9,7 @@
 #include "Particles/ParticleSystemComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "../Actors/CBullet.h"
+#include "../OSS.h"
 
 #define COLLISION_WEAPON		ECC_GameTraceChannel1
 
@@ -24,6 +25,8 @@ AFPSCharacter::AFPSCharacter()
 
 	WeaponRange = 5000.0f;
 	WeaponDamage = 20.0f;
+
+	Health = 100.f;
 
 	//-------------------------------------------------------------------------
 	//CameraComp
@@ -151,14 +154,6 @@ void AFPSCharacter::OnFire()
 	}
 
 	const FVector EndTrace = StartTrace + ShootDir * WeaponRange;
-	const FHitResult Impact = WeaponTrace(StartTrace, EndTrace);
-	AActor* DamagedActor = Impact.GetActor();
-	UPrimitiveComponent* DamagedComponent = Impact.GetComponent();
-
-	if ((DamagedActor != NULL) && (DamagedActor != this) && (DamagedComponent != NULL) && DamagedComponent->IsSimulatingPhysics())
-	{
-		DamagedComponent->AddImpulseAtLocation(ShootDir * WeaponDamage, Impact.Location);
-	}
 
 	if (FP_GunshotParticle)
 	{
@@ -166,43 +161,12 @@ void AFPSCharacter::OnFire()
 		FP_GunshotParticle->SetActive(true);
 	}
 
-	ServerFire();
-
+	ServerFire(StartTrace, EndTrace);
 }
 
-void AFPSCharacter::ToggleCrouch()
+void AFPSCharacter::ServerFire_Implementation(const FVector& LineStart, const FVector& LineEnd)
 {
-	ServerToggleCrouch();
-}
-
-void AFPSCharacter::ServerToggleCrouch_Implementation()
-{
-	bCrouch = !bCrouch;
-
-	CrouchMovement();
-}
-
-void AFPSCharacter::OpRep_bCrouch()
-{
-	CrouchMovement();
-}
-
-void AFPSCharacter::CrouchMovement()
-{
-	if (bCrouch)
-	{
-		CameraComponent->SetRelativeLocation(FVector());
-		GetCharacterMovement()->MaxWalkSpeed = 270.f;
-	}
-	else
-	{
-		CameraComponent->SetRelativeLocation(FVector(0, 0, 64));
-		GetCharacterMovement()->MaxWalkSpeed = 600.f;
-	}
-}
-
-void AFPSCharacter::ServerFire_Implementation()
-{
+	WeaponTrace(LineStart, LineEnd);
 	NetMulticastFire();
 
 	if (ensure(BulletClass))
@@ -238,6 +202,63 @@ void AFPSCharacter::NetMulticastFire_Implementation()
 	}
 }
 
+void AFPSCharacter::ToggleCrouch()
+{
+	ServerToggleCrouch();
+}
+
+void AFPSCharacter::ServerToggleCrouch_Implementation()
+{
+	bCrouch = !bCrouch;
+
+	CrouchMovement();
+}
+
+void AFPSCharacter::OpRep_bCrouch()
+{
+	CrouchMovement();
+}
+
+void AFPSCharacter::CrouchMovement()
+{
+	if (bCrouch)
+	{
+		CameraComponent->SetRelativeLocation(FVector::ZeroVector);
+		GetCharacterMovement()->MaxWalkSpeed = 270.f;
+	}
+	else
+	{
+		CameraComponent->SetRelativeLocation(FVector(0, 0, 64));
+		GetCharacterMovement()->MaxWalkSpeed = 600.f;
+	}
+}
+
+float AFPSCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float DamageValue = Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+
+	if (DamageCauser == this)
+	{
+		return 0.f;
+	}
+
+	if (Health <= 0)
+	{
+		return 0.f;
+	}
+
+	//Hitted
+	Health -= Damage;
+
+	//Dead
+	if (Health <= 0)
+	{
+		return 0.f;
+	}
+
+	return DamageValue;
+}
+
 void AFPSCharacter::MoveForward(float Value)
 {
 	if (Value != 0.0f)
@@ -264,13 +285,25 @@ void AFPSCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
-FHitResult AFPSCharacter::WeaponTrace(const FVector& StartTrace, const FVector& EndTrace) const
+FHitResult AFPSCharacter::WeaponTrace(const FVector& StartTrace, const FVector& EndTrace)
 {
 	FCollisionQueryParams TraceParams(SCENE_QUERY_STAT(WeaponTrace), true, GetInstigator());
 	TraceParams.bReturnPhysicalMaterial = true;
 
 	FHitResult Hit(ForceInit);
 	GetWorld()->LineTraceSingleByChannel(Hit, StartTrace, EndTrace, COLLISION_WEAPON, TraceParams);
+
+	if (!Hit.bBlockingHit)
+	{
+		return Hit;
+	}
+
+	AFPSCharacter* OtherCharacter = Cast<AFPSCharacter>(Hit.GetActor());
+	if (OtherCharacter)
+	{
+		OtherCharacter->TakeDamage(WeaponDamage, FDamageEvent(), GetController(), this);
+	}
+
 
 	return Hit;
 }
@@ -280,4 +313,5 @@ void AFPSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AFPSCharacter, bCrouch);
+	DOREPLIFETIME(AFPSCharacter, Health);
 }
