@@ -42,3 +42,11 @@ void AFPSHUD::DrawHUD()
 	TileItem.BlendMode = SE_BLEND_Translucent;
 	Canvas->DrawItem( TileItem );
 }
+
+void AFPSHUD::OnPlayerDead()
+{
+	if (PlayerStatusWidget)
+	{
+		PlayerStatusWidget->OnPlayerDead();
+	}
+}

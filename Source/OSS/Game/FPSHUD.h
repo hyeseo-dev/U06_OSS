@@ -28,5 +28,7 @@ private:
 
 	UCPlayerStatusWidget* PlayerStatusWidget;
 
+public:
+	void OnPlayerDead();
 };
 

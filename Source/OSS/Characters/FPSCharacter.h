@@ -113,5 +113,12 @@ public:
 public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE float GetHealth() const { return Health; }
+
+private:
+	UFUNCTION(NetMulticast, Unreliable)
+	void NetMulticastRagdoll(FVector ImpactDirection);
+
+	UFUNCTION(Client, Unreliable)
+	void ClientRagdoll(FVector ImpactDirection);
 };
 
