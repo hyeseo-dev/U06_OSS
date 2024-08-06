@@ -10,7 +10,6 @@
 #include "Net/UnrealNetwork.h"
 #include "../Actors/CBullet.h"
 #include "../OSS.h"
-#include "../Game/CPlayerState.h"
 #include "../Game/FPSGameMode.h"
 #include "../Game/FPSHUD.h"
 
@@ -266,7 +265,7 @@ float AFPSCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEvent, A
 			{
 				SelfPS->Death++;
 			}
-			
+
 			if (OtherPS)
 			{
 				OtherPS->SetScore(OtherPS->GetScore() + 1.f);
@@ -277,7 +276,8 @@ float AFPSCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEvent, A
 			{
 				GM->OnActorKilled(this);
 			}
-			
+
+
 			FVector ImpactDirection = (GetActorLocation() - DamageCauser->GetActorLocation()).GetSafeNormal();
 			NetMulticastRagdoll(ImpactDirection);
 			ClientRagdoll(ImpactDirection);
@@ -285,6 +285,7 @@ float AFPSCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEvent, A
 			SetLifeSpan(5.f);
 		}
 	}
+
 
 	return DamageValue;
 }
@@ -301,8 +302,6 @@ void AFPSCharacter::NetMulticastRagdoll_Implementation(FVector ImpactDirection)
 
 void AFPSCharacter::ClientRagdoll_Implementation(FVector ImpactDirection)
 {
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
 	FP_Mesh->SetCollisionProfileName("Ragdoll");
 	FP_Mesh->SetPhysicsBlendWeight(1.f);
 	FP_Mesh->SetSimulatePhysics(true);
@@ -317,9 +316,6 @@ void AFPSCharacter::ClientRagdoll_Implementation(FVector ImpactDirection)
 			HUD->OnPlayerDead();
 		}
 	}
-	
-
-	
 }
 
 void AFPSCharacter::MoveForward(float Value)
@@ -364,11 +360,45 @@ FHitResult AFPSCharacter::WeaponTrace(const FVector& StartTrace, const FVector& 
 	AFPSCharacter* OtherCharacter = Cast<AFPSCharacter>(Hit.GetActor());
 	if (OtherCharacter)
 	{
-		OtherCharacter->TakeDamage(WeaponDamage, FDamageEvent(), GetController(), this);
+		ACPlayerState* SelfPS = this->GetPlayerState<ACPlayerState>();
+		ACPlayerState* OtherPS = OtherCharacter->GetPlayerState<ACPlayerState>();
+
+		if (SelfPS && OtherPS && OtherPS->IsHostileTeam(SelfPS))
+		{
+			OtherCharacter->TakeDamage(WeaponDamage, FDamageEvent(), GetController(), this);
+		}	
 	}
 
-
 	return Hit;
+}
+
+void AFPSCharacter::SetTeamColor(ETeamType InTeam)
+{
+	BodyColor = FVector::OneVector;
+
+	switch (InTeam)
+	{
+	case ETeamType::Red:
+	{
+		BodyColor = FVector(1, 0, 0);
+	}
+	break;
+
+	case ETeamType::Blue:
+	{
+		BodyColor = FVector(0, 0, 1);
+	}
+	break;
+	}
+
+	FP_Mesh->SetVectorParameterValueOnMaterials("BodyColor", BodyColor);
+	GetMesh()->SetVectorParameterValueOnMaterials("BodyColor", BodyColor);
+}
+
+void AFPSCharacter::OnRep_BodyColor()
+{
+	FP_Mesh->SetVectorParameterValueOnMaterials("BodyColor", BodyColor);
+	GetMesh()->SetVectorParameterValueOnMaterials("BodyColor", BodyColor);
 }
 
 void AFPSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps)const
@@ -377,4 +407,5 @@ void AFPSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 
 	DOREPLIFETIME(AFPSCharacter, bCrouch);
 	DOREPLIFETIME(AFPSCharacter, Health);
+	DOREPLIFETIME(AFPSCharacter, BodyColor);
 }
