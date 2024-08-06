@@ -10,6 +10,8 @@
 #include "Net/UnrealNetwork.h"
 #include "../Actors/CBullet.h"
 #include "../OSS.h"
+#include "../Game/CPlayerState.h"
+#include "../Game/FPSGameMode.h"
 
 #define COLLISION_WEAPON		ECC_GameTraceChannel1
 
@@ -247,15 +249,36 @@ float AFPSCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEvent, A
 		return 0.f;
 	}
 
-	//Hitted
-	Health -= Damage;
-
-	//Dead
-	if (Health <= 0)
+	APawn* CauserPawn = Cast<APawn>(DamageCauser);
+	if (CauserPawn)
 	{
-		return 0.f;
-	}
+		//Hitted
+		Health -= Damage;
 
+		//Dead
+		if (Health <= 0)
+		{
+			ACPlayerState* SelfPS = GetPlayerState<ACPlayerState>();
+			ACPlayerState* OtherPS = CauserPawn->GetPlayerState<ACPlayerState>();
+
+			if (SelfPS)
+			{
+				SelfPS->Death++;
+			}
+			
+			if (OtherPS)
+			{
+				OtherPS->SetScore(OtherPS->GetScore() + 1.f);
+			}
+
+			AFPSGameMode* GM = GetWorld()->GetAuthGameMode<AFPSGameMode>();
+			if (GM)
+			{
+				GM->OnActorKilled(this);
+			}
+			
+		}
+	}
 	return DamageValue;
 }
 
